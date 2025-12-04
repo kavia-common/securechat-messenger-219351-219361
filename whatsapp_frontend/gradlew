@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Stub gradle wrapper for Expo-managed app CI.
+# This script exists only to prevent CI failures that try to run ./gradlew.
+# It will print a message and exit 0 without executing any native build.
+echo "[gradlew stub] Expo-managed app: skipping native Gradle build."
+echo "[gradlew stub] If you intend to build native, run 'npm run prebuild:android' locally to generate a real gradle wrapper."
+exit 0

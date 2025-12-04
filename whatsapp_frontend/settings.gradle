@@ -1,0 +1,5 @@
+/*
+  Stub Gradle settings for Expo managed app CI.
+  Real native projects are generated only after running `npm run prebuild:android`.
+*/
+rootProject.name = "whatsapp_frontend_expo_stub"

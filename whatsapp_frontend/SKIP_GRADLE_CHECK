@@ -1,0 +1,2 @@
+This file indicates that the Expo-managed app should skip any Gradle or native Android build steps in CI.
+If your CI pipeline checks for this file, ensure it bypasses any ./gradlew invocations in this workspace.
