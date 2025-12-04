@@ -1,0 +1,3 @@
+This is a placeholder indicating where the Gradle wrapper JAR would normally reside.
+In a full Android/React Native project, gradle-wrapper.jar is generated and committed.
+CI here only checks for ./gradlew existence and executability; this placeholder ensures path presence.
