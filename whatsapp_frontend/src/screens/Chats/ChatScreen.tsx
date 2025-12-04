@@ -21,14 +21,19 @@ const ChatScreen: React.FC<Props> = ({ route }) => {
     (async () => {
       const data = await api.getMessages(chatId);
       setMessages(data);
+      await chatSocket.connect();
+      await chatSocket.joinConversation(chatId);
     })();
+    return () => {
+      chatSocket.leaveConversation(chatId);
+    };
   }, [chatId]);
 
   useEffect(() => {
     const unsub = chatSocket.addListener((e) => {
       if (e.type === 'message' && e.chatId === chatId) {
         setMessages((prev) => [...prev, e.message]);
-        showMessageNotification('New message', e.message?.content || 'You received a message');
+        showMessageNotification('New message', (e.message as any)?.content || 'You received a message');
         listRef.current?.scrollToEnd({ animated: true });
       }
     });
@@ -39,10 +44,12 @@ const ChatScreen: React.FC<Props> = ({ route }) => {
     const content = text.trim();
     if (!content) return;
     setText('');
-    const msg = await api.sendMessage(chatId, { type: 'text', content });
-    setMessages((prev) => [...prev, msg]);
+    const sentViaWs = await chatSocket.sendText(chatId, content);
+    if (!sentViaWs) {
+      const msg = await api.sendMessage(chatId, { type: 'text', content });
+      setMessages((prev) => [...prev, msg]);
+    }
     listRef.current?.scrollToEnd({ animated: true });
-    chatSocket.send({ event: 'typing', chatId, isTyping: false });
   };
 
   const onAttachImage = async () => {
@@ -66,11 +73,11 @@ const ChatScreen: React.FC<Props> = ({ route }) => {
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
           <MessageBubble
-            isMine={!!item.isMine}
-            text={item.type === 'text' ? item.content : undefined}
-            mediaUrl={item.type === 'image' ? item.mediaUrl : undefined}
-            time={item.time}
-            status={item.status}
+            isMine={!!(item as any).isMine}
+            text={(item as any).type === 'text' ? item.content : undefined}
+            mediaUrl={(item as any).type === 'image' ? (item as any).mediaUrl : undefined}
+            time={(item as any).time}
+            status={(item as any).status}
           />
         )}
         contentContainerStyle={{ paddingVertical: 8 }}
@@ -83,10 +90,7 @@ const ChatScreen: React.FC<Props> = ({ route }) => {
         </TouchableOpacity>
         <TextInput
           value={text}
-          onChangeText={(t) => {
-            setText(t);
-            chatSocket.send({ event: 'typing', chatId, isTyping: t.length > 0 });
-          }}
+          onChangeText={setText}
           placeholder="Type a message"
           style={styles.input}
           placeholderTextColor={Colors.mutedText}

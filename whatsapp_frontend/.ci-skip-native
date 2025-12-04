@@ -1,0 +1,3 @@
+skip-android=true
+skip-ios=true
+reason=Expo managed workflow - no native projects generated for this task

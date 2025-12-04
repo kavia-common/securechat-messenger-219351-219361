@@ -8,6 +8,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "start:web:ci": "CI=1 expo start --web --non-interactive",
+    "ci": "echo \"Running CI checks (no native builds)\" && npm run lint",
     "lint": "eslint .",
     "prebuild:android": "expo prebuild --platform android",
     "build": "echo \"Android build is disabled in CI for this task\"",
@@ -15,6 +16,7 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
+    "@microsoft/signalr": "^8.0.7",
     "@react-native-async-storage/async-storage": "^2.0.0",
     "@react-navigation/bottom-tabs": "^7.0.14",
     "@react-navigation/native": "^7.0.14",

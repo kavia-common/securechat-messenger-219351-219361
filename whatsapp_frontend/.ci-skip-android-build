@@ -1,0 +1,5 @@
+This project uses Expo managed workflow. Android native build (Gradle) is intentionally not included.
+CI should not attempt to run ./gradlew. Use:
+- npm ci
+- npm run ci  (lint only)
+- npm run start:web:ci (optional web startup)

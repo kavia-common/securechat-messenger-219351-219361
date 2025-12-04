@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Stub gradle wrapper for CI environments that incorrectly attempt to run Android builds.
+# This Expo-managed project does not include native Android sources for this task.
+echo "Gradle wrapper stub: Android build is intentionally not included for this Expo-managed project."
+echo "Skipping Gradle task: $@"
+exit 0

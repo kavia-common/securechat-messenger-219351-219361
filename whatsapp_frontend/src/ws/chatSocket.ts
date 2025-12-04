@@ -1,20 +1,20 @@
 import { CONFIG } from '../config';
 import { storage } from '../storage';
-import type { IncomingSocketEvent, OutgoingSocketEvent } from '../types';
+import type { Message } from '../types';
+import * as signalR from '@microsoft/signalr';
 
 export type ChatEvent =
   | { type: 'connected' }
   | { type: 'disconnected' }
   | { type: 'error'; error: unknown }
-  | { type: 'message'; chatId: string; message: IncomingSocketEvent extends { event: 'message'; message: infer M } ? M : never };
+  | { type: 'message'; chatId: string; message: Message };
 
 type Listener = (e: ChatEvent) => void;
 
 class ChatSocket {
-  private ws?: WebSocket;
+  private conn?: signalR.HubConnection;
   private listeners = new Set<Listener>();
-  private reconnectTimer?: ReturnType<typeof setTimeout>;
-  private manualClose = false;
+  private reconnecting = false;
 
   // PUBLIC_INTERFACE
   addListener(listener: Listener) {
@@ -29,60 +29,92 @@ class ChatSocket {
 
   // PUBLIC_INTERFACE
   async connect() {
-    /** Connect to chat websocket endpoint with auth token */
-    this.manualClose = false;
-    const token = await storage.getToken();
-    const url = `${CONFIG.WS_URL}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-    this.ws = new WebSocket(url);
+    /** Connect to SignalR chat hub with auth token */
+    if (this.conn && (this.conn.state === signalR.HubConnectionState.Connected || this.conn.state === signalR.HubConnectionState.Connecting)) {
+      return;
+    }
+    const url = CONFIG.WS_URL; // ws://localhost:3001/ws/chat
+    this.conn = new signalR.HubConnectionBuilder()
+      .withUrl(url.replace(/^ws/, 'http'), {
+        accessTokenFactory: async () => (await storage.getToken()) || '',
+      })
+      .withAutomaticReconnect()
+      .configureLogging(signalR.LogLevel.Warning)
+      .build();
 
-    this.ws.onopen = () => {
-      this.emit({ type: 'connected' });
-    };
-    this.ws.onclose = () => {
+    this.conn.onclose((_err) => {
       this.emit({ type: 'disconnected' });
-      if (!this.manualClose) {
-        this.scheduleReconnect();
-      }
-    };
-    this.ws.onerror = (err) => {
-      this.emit({ type: 'error', error: err });
-    };
-    this.ws.onmessage = (msg) => {
-      try {
-        const data = JSON.parse(msg.data as string) as IncomingSocketEvent;
-        if (data?.event === 'message') {
-          this.emit({ type: 'message', chatId: data.chatId, message: data.message });
-        }
-      } catch {
-        // ignore invalid payloads
-      }
-    };
-  }
+    });
 
-  private scheduleReconnect() {
-    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-    this.reconnectTimer = setTimeout(() => void this.connect(), 1500);
+    this.conn.onreconnecting((_err) => {
+      this.reconnecting = true;
+    });
+
+    this.conn.onreconnected((_id) => {
+      this.reconnecting = false;
+      this.emit({ type: 'connected' });
+    });
+
+    this.conn.on('message', (msg: any) => {
+      try {
+        const m = msg as Message & { conversationId?: string };
+        const chatId = (m as any).conversationId || (m as any).chatId || '';
+        this.emit({ type: 'message', chatId, message: m });
+      } catch (e) {
+        this.emit({ type: 'error', error: e });
+      }
+    });
+
+    try {
+      await this.conn.start();
+      this.emit({ type: 'connected' });
+    } catch (e) {
+      this.emit({ type: 'error', error: e });
+    }
   }
 
   // PUBLIC_INTERFACE
   async disconnect() {
-    /** Disconnect websocket and prevent reconnect */
-    this.manualClose = true;
-    if (this.ws) {
-      this.ws.close();
-      this.ws = undefined;
+    /** Disconnect SignalR */
+    if (this.conn) {
+      await this.conn.stop();
+      this.conn = undefined;
     }
-    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
   }
 
   // PUBLIC_INTERFACE
-  send(payload: OutgoingSocketEvent) {
-    /** Send a message to the server via WS */
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(payload));
-      return true;
+  async joinConversation(conversationId: string) {
+    /** Join a conversation group to receive messages */
+    if (!this.conn) return;
+    try {
+      await this.conn.invoke('JoinConversation', conversationId);
+    } catch (e) {
+      this.emit({ type: 'error', error: e });
     }
-    return false;
+  }
+
+  // PUBLIC_INTERFACE
+  async leaveConversation(conversationId: string) {
+    /** Leave a conversation group */
+    if (!this.conn) return;
+    try {
+      await this.conn.invoke('LeaveConversation', conversationId);
+    } catch (e) {
+      this.emit({ type: 'error', error: e });
+    }
+  }
+
+  // PUBLIC_INTERFACE
+  async sendText(conversationId: string, text: string) {
+    /** Send a text message via SignalR */
+    if (!this.conn) return false;
+    try {
+      await this.conn.invoke('SendMessage', conversationId, text);
+      return true;
+    } catch (e) {
+      this.emit({ type: 'error', error: e });
+      return false;
+    }
   }
 }
 

@@ -41,57 +41,66 @@ export const api = {
   // PUBLIC_INTERFACE
   async login(email: string, password: string) {
     /** Authenticate and receive token + user */
-    return request<AuthResponse>('/auth/login', 'POST', { email, password });
+    return request<AuthResponse>('/api/Auth/login', 'POST', { email, password });
   },
   // PUBLIC_INTERFACE
   async register(name: string, email: string, password: string) {
     /** Register user and receive token + user */
-    return request<AuthResponse>('/auth/register', 'POST', { name, email, password });
+    return request<AuthResponse>('/api/Auth/register', 'POST', { displayName: name, email, password });
   },
   // PUBLIC_INTERFACE
   async me() {
     /** Get current user profile */
-    return request<User>('/users/me', 'GET');
+    return request<User>('/api/Auth/me', 'GET');
   },
   // PUBLIC_INTERFACE
   async listChats() {
     /** List chats for current user */
-    return request<Chat[]>('/chats', 'GET');
+    return request<Chat[]>('/api/Conversations', 'GET');
   },
   // PUBLIC_INTERFACE
-  async getMessages(chatId: string) {
+  async getMessages(chatId: string, limit = 50, offset = 0) {
     /** Get messages for a chat */
-    return request<Message[]>(`/chats/${encodeURIComponent(chatId)}/messages`, 'GET');
+    const params = new URLSearchParams({ limit: String(limit), offset: String(offset) }).toString();
+    return request<Message[]>(`/api/Messages/${encodeURIComponent(chatId)}?${params}`, 'GET');
   },
   // PUBLIC_INTERFACE
   async sendMessage(chatId: string, payload: SendMessagePayload) {
-    /** Send message in a chat */
-    return request<Message>(`/chats/${encodeURIComponent(chatId)}/messages`, 'POST', payload);
+    /** Send message in a chat (text or image url as text fallback) */
+    if (payload.type === 'image' && payload.mediaUrl) {
+      return request<Message>('/api/Messages/send', 'POST', { conversationId: chatId, text: payload.mediaUrl });
+    }
+    return request<Message>('/api/Messages/send', 'POST', { conversationId: chatId, text: payload.content });
   },
   // PUBLIC_INTERFACE
   async listContacts() {
     /** List user contacts */
-    return request<Contact[]>('/contacts', 'GET');
+    return request<Contact[]>('/api/Contacts', 'GET');
   },
   // PUBLIC_INTERFACE
   async searchUsers(q: string) {
-    /** Search users to add as contacts */
-    const search = new URLSearchParams({ q }).toString();
-    return request<Contact[]>(`/users/search?${search}`, 'GET');
+    /** Search users to add as contacts - best effort */
+    try {
+      const search = new URLSearchParams({ q }).toString();
+      return await request<Contact[]>(`/api/Users/search?${search}`, 'GET');
+    } catch {
+      return [];
+    }
   },
   // PUBLIC_INTERFACE
   async addContact(userId: string) {
-    /** Add a user as contact */
-    return request<Contact>('/contacts', 'POST', { userId });
+    /** Create or get direct conversation with a user and return as contact-like info */
+    const conv = await request<{ id: string; title?: string; avatar?: string }>('/api/Conversations/direct', 'POST', { otherUserId: userId });
+    return { id: userId, name: conv.title, chatId: conv.id } as unknown as Contact;
   },
   // PUBLIC_INTERFACE
   async uploadMedia(uri: string, mime: string) {
-    /** Upload media file, returns url */
+    /** Upload media file by sending media via send-media; returns an accessible url from message */
     const token = await storage.getToken();
     const form = new FormData();
     // RN FormData file entry
     form.append('file', { uri, name: 'upload', type: mime } as unknown as Blob);
-    const res = await fetch(`${CONFIG.API_BASE_URL}/media/upload`, {
+    const res = await fetch(`${CONFIG.API_BASE_URL}/api/Messages/send-media`, {
       method: 'POST',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -101,6 +110,12 @@ export const api = {
     if (!res.ok) {
       throw new Error('Upload failed');
     }
-    return (await res.json()) as { url: string };
+    const msg = (await res.json()) as Message;
+    return { url: (msg as any).mediaUrl || msg.content || '' } as { url: string };
+  },
+  // PUBLIC_INTERFACE
+  async registerPushToken(expoPushToken: string) {
+    /** Register Expo push token */
+    return request<{ success: boolean }>('/api/Users/push-token', 'POST', { expoPushToken });
   },
 };

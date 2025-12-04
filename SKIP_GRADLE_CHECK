@@ -1,0 +1,2 @@
+This is an Expo-managed app. There is no Gradle wrapper. CI must not run ./gradlew.
+Use npm run ci for lint-only checks.
