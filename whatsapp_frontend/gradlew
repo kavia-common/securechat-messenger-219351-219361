@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
-echo "[stub-gradlew] This is an Expo managed app. Native Android project is not generated."
-echo "[stub-gradlew] Skip Gradle tasks in CI or run 'npm run prebuild:android' locally to generate native projects."
+# Stub Gradle wrapper for CI environments that wrongly invoke ./gradlew on an Expo-managed app.
+# This is a no-op to prevent failures like: bash: line 1: ./gradlew: No such file or directory
+# If you actually need native builds, run: npm run prebuild:android (which will generate a real gradlew)
+echo "[stub-gradlew] Expo-managed app: native Gradle build is skipped."
+echo "[stub-gradlew] Command received: $*"
 exit 0

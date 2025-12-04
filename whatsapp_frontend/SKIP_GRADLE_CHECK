@@ -1,1 +1,2 @@
-true
+This file is a marker for CI to skip Gradle/Android checks for the Expo-managed app.
+There is no Gradle wrapper unless prebuild is run locally. Do not run native tasks in CI by default.

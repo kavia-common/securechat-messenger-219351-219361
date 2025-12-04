@@ -1,9 +1,12 @@
-# Skip Gradle in CI
+# Skip Gradle in CI (Expo)
 
-This repository includes an Expo-managed React Native app at:
-  whatsapp_frontend/
+This workspace contains an Expo-managed app at whatsapp_frontend. There is no Gradle wrapper unless you run a prebuild locally.
 
-Do NOT run Gradle tasks in CI for this app unless you have explicitly generated native projects via `npm run prebuild:android`.
+- CI must not invoke ./gradlew or Gradle tasks for this app by default.
+- Use the guard script if your CI template still attempts native builds:
+  bash whatsapp_frontend/ci-guard.sh "<native or gradle command>"
 
-Use the guard script to bypass native steps:
-  bash whatsapp_frontend/ci-guard.sh
+If you really need native builds in CI:
+1) Run: npm ci
+2) Generate native projects: npm run prebuild:android
+3) Proceed with Gradle tasks (android/gradlew will exist).
