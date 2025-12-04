@@ -58,7 +58,7 @@ const ChatScreen: React.FC<Props> = ({ route }) => {
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 });
     if (!res.canceled && res.assets && res.assets.length > 0) {
       const asset = res.assets[0];
-      const upload = await api.uploadMedia(asset.uri, asset.mimeType || 'image/jpeg');
+      const upload = await api.uploadMedia(chatId, asset.uri, asset.mimeType || 'image/jpeg');
       const msg = await api.sendMessage(chatId, { type: 'image', mediaUrl: upload.url });
       setMessages((prev) => [...prev, msg]);
       listRef.current?.scrollToEnd({ animated: true });

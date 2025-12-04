@@ -1,6 +1,4 @@
 @echo off
-REM Stub gradle wrapper for Expo-managed app CI.
-REM Prevents CI failures when gradlew.bat is invoked.
-echo [gradlew stub] Expo-managed app: skipping native Gradle build.
-echo [gradlew stub] To build native, run "npm run prebuild:android" locally to generate a real Gradle wrapper.
-exit /B 0
+echo [stub-gradlew] This is an Expo managed app. Native Android project is not generated.
+echo [stub-gradlew] Skip Gradle tasks in CI or run "npm run prebuild:android" locally to generate native projects.
+exit /b 0

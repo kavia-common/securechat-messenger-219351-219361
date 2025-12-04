@@ -41,17 +41,33 @@ export const api = {
   // PUBLIC_INTERFACE
   async login(email: string, password: string) {
     /** Authenticate and receive token + user */
-    return request<AuthResponse>('/api/Auth/login', 'POST', { email, password });
+    // Be resilient to controller route casing (/api/Auth vs /api/auth)
+    const res = await request<any>('/api/Auth/login', 'POST', { email, password }).catch(() =>
+      request<any>('/api/auth/login', 'POST', { email, password })
+    );
+    // Normalize backend { Token, User } to { token, user }
+    const token = res.token ?? res.Token;
+    const user = res.user ?? res.User;
+    return { token, user } as AuthResponse;
   },
   // PUBLIC_INTERFACE
   async register(name: string, email: string, password: string) {
     /** Register user and receive token + user */
-    return request<AuthResponse>('/api/Auth/register', 'POST', { displayName: name, email, password });
+    const res = await request<any>('/api/Auth/register', 'POST', { displayName: name, email, password }).catch(() =>
+      request<any>('/api/auth/register', 'POST', { displayName: name, email, password })
+    );
+    const token = res.token ?? res.Token;
+    const user = res.user ?? res.User;
+    return { token, user } as AuthResponse;
   },
   // PUBLIC_INTERFACE
   async me() {
     /** Get current user profile */
-    return request<User>('/api/Auth/me', 'GET');
+    try {
+      return await request<User>('/api/Auth/me', 'GET');
+    } catch {
+      return await request<User>('/api/auth/me', 'GET');
+    }
   },
   // PUBLIC_INTERFACE
   async listChats() {
@@ -94,10 +110,11 @@ export const api = {
     return { id: userId, name: conv.title, chatId: conv.id } as unknown as Contact;
   },
   // PUBLIC_INTERFACE
-  async uploadMedia(uri: string, mime: string) {
+  async uploadMedia(chatId: string, uri: string, mime: string) {
     /** Upload media file by sending media via send-media; returns an accessible url from message */
     const token = await storage.getToken();
     const form = new FormData();
+    form.append('conversationId', chatId as unknown as any);
     // RN FormData file entry
     form.append('file', { uri, name: 'upload', type: mime } as unknown as Blob);
     const res = await fetch(`${CONFIG.API_BASE_URL}/api/Messages/send-media`, {
@@ -111,11 +128,15 @@ export const api = {
       throw new Error('Upload failed');
     }
     const msg = (await res.json()) as Message;
-    return { url: (msg as any).mediaUrl || msg.content || '' } as { url: string };
+    return { url: (msg as any).mediaUrl || (msg as any).content || '' } as { url: string };
   },
   // PUBLIC_INTERFACE
   async registerPushToken(expoPushToken: string) {
     /** Register Expo push token */
-    return request<{ success: boolean }>('/api/Users/push-token', 'POST', { expoPushToken });
+    try {
+      return await request<{ success: boolean }>('/api/Users/push-token', 'POST', { expoPushToken });
+    } catch {
+      return await request<{ success: boolean }>('/api/users/push-token', 'POST', { expoPushToken });
+    }
   },
 };

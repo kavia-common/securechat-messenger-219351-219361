@@ -1,12 +1,9 @@
-# Skip Gradle for Expo Managed App
+# Skip Gradle in CI
 
-This repository contains an Expo-managed React Native app under whatsapp_frontend with no native Gradle wrapper by default.
+This repository includes an Expo-managed React Native app at:
+  whatsapp_frontend/
 
-To avoid CI failures:
-- Do not invoke ./gradlew for whatsapp_frontend unless you have run a prebuild locally.
-- Check for whatsapp_frontend/SKIP_GRADLE_CHECK or run whatsapp_frontend/ci-guard.sh to conditionally skip native tasks.
+Do NOT run Gradle tasks in CI for this app unless you have explicitly generated native projects via `npm run prebuild:android`.
 
-Backend integration:
-- Backend: http://localhost:3001
-- SignalR Hub: ws://localhost:3001/ws/chat
-- CORS: Backend already allows common local origins.
+Use the guard script to bypass native steps:
+  bash whatsapp_frontend/ci-guard.sh
