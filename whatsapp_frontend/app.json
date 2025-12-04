@@ -13,17 +13,28 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "We need access to your photo library to send images.",
+        "NSCameraUsageDescription": "We need access to your camera to take photos.",
+        "NSUserTrackingUsageDescription": "We use this to provide notifications.",
+        "UIBackgroundModes": ["remote-notification"]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "permissions": ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "CAMERA", "POST_NOTIFICATIONS"],
       "edgeToEdgeEnabled": true
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "API_BASE_URL": "http://localhost:3001",
+      "WS_URL": "ws://localhost:3001/ws/chat"
     }
   }
 }

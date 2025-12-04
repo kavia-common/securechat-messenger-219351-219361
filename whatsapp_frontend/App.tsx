@@ -1,21 +1,28 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, View } from 'react-native';
+import RootNavigator from './src/navigation';
+import { Colors } from './src/theme/colors';
+import { chatSocket } from './src/ws/chatSocket';
+import { requestPushPermission } from './src/services/notifications';
 
 export default function App() {
+  useEffect(() => {
+    // Initialize WebSocket connection on app start
+    chatSocket.connect();
+
+    // Request push permissions (local notifications)
+    requestPushPermission();
+
+    return () => {
+      chatSocket.disconnect();
+    };
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      <RootNavigator />
+      <StatusBar style={Platform.OS === 'ios' ? 'dark' : 'auto'} />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
